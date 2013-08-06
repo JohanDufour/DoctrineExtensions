@@ -31,14 +31,12 @@ class SoftDeleteableFilter extends SQLFilter
             return '';
         }
 
-        $config = $this->getListener()->getConfiguration($this->getEntityManager(), $targetEntity->name);
-
-        if (!isset($config['softDeleteable']) || !$config['softDeleteable']) {
+        $exm = $this->getListener()->getConfiguration($this->getEntityManager(), $targetEntity->name);
+        if (!$exm || $exm->isEmpty()) {
             return '';
         }
 
-        $column = $targetEntity->columnNames[$config['fieldName']];
-
+        $column = $targetEntity->columnNames[$exm->getField()];
         return $targetTableAlias.'.'.$column.' IS NULL';
     }
 
@@ -55,24 +53,18 @@ class SoftDeleteableFilter extends SQLFilter
     protected function getListener()
     {
         if ($this->listener === null) {
-            $em = $this->getEntityManager();
-            $evm = $em->getEventManager();
-
-            foreach ($evm->getListeners() as $listeners) {
+            foreach ($this->getEntityManager()->getEventManager()->getListeners() as $listeners) {
                 foreach ($listeners as $listener) {
                     if ($listener instanceof SoftDeleteableListener) {
                         $this->listener = $listener;
-
                         break 2;
                     }
                 }
             }
-
             if ($this->listener === null) {
                 throw new \RuntimeException('Listener "SoftDeleteableListener" was not added to the EventManager!');
             }
         }
-
         return $this->listener;
     }
 
