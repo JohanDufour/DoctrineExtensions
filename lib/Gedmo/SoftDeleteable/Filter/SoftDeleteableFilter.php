@@ -2,7 +2,7 @@
 
 namespace Gedmo\SoftDeleteable\Filter;
 
-use Doctrine\ORM\Mapping\ClassMetaData,
+use Doctrine\ORM\Mapping\ClassMetadata,
     Doctrine\ORM\Query\Filter\SQLFilter,
     Gedmo\SoftDeleteable\SoftDeleteableListener;
 
@@ -15,29 +15,29 @@ use Doctrine\ORM\Mapping\ClassMetaData,
  * @author Patrik Votoček <patrik@votocek.cz>
  * @license MIT License (http://www.opensource.org/licenses/mit-license.php)
  */
-
 class SoftDeleteableFilter extends SQLFilter
 {
     protected $listener;
     protected $entityManager;
     protected $disabled = array();
 
-    public function addFilterConstraint(ClassMetadata $targetEntity, $targetTableAlias)
+    public function addFilterConstraint(ClassMetadata $meta, $targetTableAlias)
     {
-        $class = $targetEntity->getName();
+        $class = $meta->getName();
         if (array_key_exists($class, $this->disabled) && $this->disabled[$class] === true) {
             return '';
-        } elseif (array_key_exists($targetEntity->rootEntityName, $this->disabled) && $this->disabled[$targetEntity->rootEntityName] === true) {
+        } elseif (array_key_exists($meta->rootEntityName, $this->disabled) && $this->disabled[$meta->rootEntityName] === true) {
             return '';
         }
 
-        $exm = $this->getListener()->getConfiguration($this->getEntityManager(), $targetEntity->name);
+        $exm = $this->getListener()->getConfiguration($this->getEntityManager(), $meta->name);
         if (!$exm || $exm->isEmpty()) {
             return '';
         }
 
-        $column = $targetEntity->columnNames[$exm->getField()];
-        return $targetTableAlias.'.'.$column.' IS NULL';
+        $platform = $this->getEntityManager()->getConnection()->getDatabasePlatform();
+        $column = $meta->getQuotedColumnName($exm->getField(), $platform);
+        return $platform->getIsNullExpression($targetTableAlias.'.'.$column);
     }
 
     public function disableForEntity($class)
