@@ -277,9 +277,14 @@ class SluggableListener extends MappedEventSubscriber
                         break;
                 }
 
+                $length = isset($mapping['length']) ? $mapping['length'] : false;
+                if ($length && $om->getConnection()->getDatabasePlatform()->getName() === 'postgresql') {
+                    // special case for postgresql
+                    $length--;
+                }
                 // cut slug if exceeded in length
-                if (isset($mapping['length']) && strlen($slug) > $mapping['length']) {
-                    $slug = substr($slug, 0, $mapping['length']);
+                if ($length && strlen($slug) > $length) {
+                    $slug = substr($slug, 0, $length);
                 }
 
                 if (isset($mapping['nullable']) && $mapping['nullable'] && !$slug) {
@@ -289,6 +294,7 @@ class SluggableListener extends MappedEventSubscriber
                 if ($options['unique'] && !is_null($slug)) {
                     $slug = $this->makeUniqueSlug($om, $object, $slugField, $slug, 0, false);
                 }
+
                 // set final slug
                 $meta->getReflectionProperty($slugField)->setValue($object, $slug);
                 // notify about changes
@@ -358,8 +364,13 @@ class SluggableListener extends MappedEventSubscriber
             } while (in_array($generatedSlug, $sameSlugs));
 
             $mapping = $meta->getFieldMapping($slugField);
-            if (isset($mapping['length']) && strlen($generatedSlug) > $mapping['length']) {
-                $generatedSlug = substr($generatedSlug, 0, $mapping['length'] - (strlen($i) + strlen($sep)));
+            $length = isset($mapping['length']) ? $mapping['length'] : false;
+            if ($length && $om->getConnection()->getDatabasePlatform()->getName() === 'postgresql') {
+                // special case for postgresql
+                $length--;
+            }
+            if ($length && strlen($generatedSlug) > $length) {
+                $generatedSlug = substr($generatedSlug, 0, $length - (strlen($i) + strlen($sep)));
                 if (substr($generatedSlug, -strlen($sep)) == $sep) {
                     $generatedSlug = substr($generatedSlug, 0, strlen($generatedSlug) - strlen($sep));
                 }
